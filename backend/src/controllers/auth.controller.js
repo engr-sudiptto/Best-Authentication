@@ -80,8 +80,48 @@ const loginController = async (req, res) => {
 
 
 
+// ------------ check username availability controller ------------- 
+const checkUsernameAndEmailController = async (req, res) => {
+  try {
+    const { userName, email } = req.body
+
+    // ----- checking userName in database ------
+    const user = await userModel.findOne({ $or: [{ userName }, { email }] });
+    
+    if (user) {
+      if (userName && user.userName === userName) {
+        return res
+          .status(200)
+          .json({
+            available: false,
+            type: 'username',
+            message: 'Username is already taken',
+          });
+      }
+      if (email && user.email === email) {
+        return res
+          .status(200)
+          .json({
+            available: false,
+            type: 'email',
+            message: 'Email is already registered',
+          });
+      }
+    }
+    return res.status(200).json({
+        available: true,
+        message: userName ? 'Username is available' : 'Email is available',
+      });
+
+
+  } catch (error) {
+    console.log('Check userName or email Error:', error)
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
 
 
 
 
-export { registerController, loginController };
+
+export { registerController, loginController, checkUsernameAndEmailController };
