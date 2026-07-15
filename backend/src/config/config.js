@@ -11,8 +11,9 @@ if (!process.env.JSON_WEB_SECRET) {
 }
 
 const config = {
-  MONGODB_URL : process.env.MONGODB_URL,
-  JSON_WEB_SECRET : process.env.JSON_WEB_SECRET
+  MONGODB_URL: process.env.MONGODB_URL,
+  JSON_WEB_SECRET: process.env.JSON_WEB_SECRET,
+  NODE_ENV: process.env.NODE_ENV,
 };
 
 export default config

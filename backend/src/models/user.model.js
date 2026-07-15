@@ -16,6 +16,9 @@ const userSchema = mongoose.Schema(
       lowercase: true,
     },
     password: { type: String, required: [true, 'Password is required'] },
+    verifyOtp: { type: String, default: '' },
+    verifyOtpExpireAt: { type: Number, default: 0 },
+    isLoggedIn:{type:Boolean, default:false}
   },
   { timestamps: true },
 );

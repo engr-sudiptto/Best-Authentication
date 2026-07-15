@@ -2,6 +2,7 @@ import userModel from '../models/user.model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import config from './../config/config.js';
+import cookie from 'cookie-parser';
 
 // ----- register controller -------
 const registerController = async (req, res) => {
@@ -9,9 +10,13 @@ const registerController = async (req, res) => {
     const { userName, email, password } = req.body;
 
     // ----- required fields -------
-    const requiredFields = { userName: "UserName", email: "Email", password: "Password" }
+    const requiredFields = {
+      userName: 'UserName',
+      email: 'Email',
+      password: 'Password',
+    };
     for (const [key, label] of Object.entries(requiredFields)) {
-      if (!req.body[key] || req.body[key]?.trim() === "") {
+      if (!req.body[key] || req.body[key]?.trim() === '') {
         return res
           .status(400)
           .json({ success: false, message: `${label} is required` });
@@ -48,6 +53,13 @@ const registerController = async (req, res) => {
       expiresIn: '7d',
     });
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: config.NODE_ENV === 'production',
+      sameSite: config.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
     // ---- structure remove password from user response for security --------
     const userResponse = {
       _id: newUser._id,
@@ -55,20 +67,16 @@ const registerController = async (req, res) => {
       email: newUser.email,
     };
 
-    res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: userResponse,
-    });
+    res
+      .status(201)
+      .json({ success: true, message: 'User registered successfully' });
+    
+    
   } catch (error) {
     console.log('Registration Error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
-
-
 
 // ------- login controller --------
 const loginController = async (req, res) => {
@@ -76,52 +84,38 @@ const loginController = async (req, res) => {
   } catch (error) {}
 };
 
-
-
-
-
-// ------------ check username availability controller ------------- 
+// ------------ check username availability controller -------------
 const checkUsernameAndEmailController = async (req, res) => {
   try {
-    const { userName, email } = req.body
+    const { userName, email } = req.body;
 
     // ----- checking userName in database ------
     const user = await userModel.findOne({ $or: [{ userName }, { email }] });
-    
+
     if (user) {
       if (userName && user.userName === userName) {
-        return res
-          .status(200)
-          .json({
-            available: false,
-            type: 'username',
-            message: 'Username is already taken',
-          });
+        return res.status(200).json({
+          available: false,
+          type: 'username',
+          message: 'Username is already taken',
+        });
       }
       if (email && user.email === email) {
-        return res
-          .status(200)
-          .json({
-            available: false,
-            type: 'email',
-            message: 'Email is already registered',
-          });
+        return res.status(200).json({
+          available: false,
+          type: 'email',
+          message: 'Email is already registered',
+        });
       }
     }
     return res.status(200).json({
-        available: true,
-        message: userName ? 'Username is available' : 'Email is available',
-      });
-
-
+      available: true,
+      message: userName ? 'Username is available' : 'Email is available',
+    });
   } catch (error) {
-    console.log('Check userName or email Error:', error)
+    console.log('Check userName or email Error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
-
-
-
-
+};
 
 export { registerController, loginController, checkUsernameAndEmailController };
