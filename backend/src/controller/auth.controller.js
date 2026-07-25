@@ -78,6 +78,58 @@ const registerController = async (req, res) => {
 // ------ verify OTP controller --------
 const verifyOtpController = async (req, res) => {
   try {
+    const { email, otp } = req.body;
+
+    // ----- required fields ------
+    if (!otp) {
+      return res.status(400).json({success:false, message:'OTP is required'})
+    }
+
+    // ------- checking existing user --------
+    const existingUser = await userModel.findOne({ email });
+    if (!existingUser) {
+      return res.status(400).json({success:false, message:'User not found'})
+    }
+
+    // ------ OTP validity check --------
+    if (Date.now() > existingUser.otpExpiredAt) {
+      return res.status(400).json({success:false, message:'OTP has expired.'})
+    }
+
+    // ------ if OTP doesn't match -------
+    if (existingUser.otp !== otp) {
+      return res.status(400).json({success:false, message:'Invalid OTP'})
+    }
+
+    // ----- if OTP matched -------
+    existingUser.otp = '';
+    existingUser.otpExpiredAt = 0;
+    existingUser.isLoggedIn = true;
+    await existingUser.save()
+
+    // ------ token(7d) create ------
+    const token = jwt.sign({ userId: existingUser._id }, config.JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: config.NODE_ENV === 'production',
+      sameSite: config.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    // ------ mail configuration ------
+    const mailOption = {
+      from: config.SENDER_MAIL,
+      to: email,
+      subject: 'Account register successfully.',
+      text: `<p>Your account has been create sucessfully.</p>`,
+      html: `<p>Thank you</p>`,
+    };
+
+    // ----- send OTP via Email using Brevo ----------
+    await transpoter.sendMail(mailOption)
+
+    // ----- response -----
+    return res.status(200).json({success:true, message:'Account register successfully.'})
     
   } catch (error) {
     console.log('Error:', error);
@@ -91,6 +143,10 @@ const verifyOtpController = async (req, res) => {
 // ------ resend OTP controller --------
 const resendOtpController = async (req, res) => {
   try {
+    const { email } = req.body;
+
+    // ----- required fields ------
+    
     
   } catch (error) {
     console.log('Error:', error);
