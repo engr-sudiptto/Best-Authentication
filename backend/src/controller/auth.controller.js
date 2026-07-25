@@ -34,16 +34,16 @@ const registerController = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // -------- genarate 6 disit OTP --------
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpiredAt = Date.now() + 5 * 60 * 1000;
+    const userOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const userOtpExpiredAt = Date.now() + 5 * 60 * 1000;
 
     // ------ creating new user object ---------
     const newUser = new userModel({
       userName,
       email,
       password:hashedPassword,
-      otp,
-      otpExpiredAt,
+      otp: userOtp,
+      otpExpiredAt: userOtpExpiredAt,
       isLoggedIn: false,
     });
 
@@ -145,8 +145,35 @@ const resendOtpController = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // ----- required fields ------
-    
+    // ---- check exixting user -------
+    const existingUser = await userModel.findOne({ email });
+    if (!existingUser) {
+      return res.status(400).json({success:false, message:'User not Found'})
+    }
+
+    // --- genarate 6 disit OTP ------
+    const userOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    const UserOtpExpireAt = Date.now() + 5 * 60 * 1000;
+
+    // -------- update otp in database ------
+    existingUser.otp = userOtp;
+    existingUser.otpExpiredAt = UserOtpExpireAt;
+    await existingUser.save()
+
+    // ----- mail configuration -----
+    const mailOption = {
+      from: config.SENDER_MAIL,
+      to: email,
+      subject: 'Resend Verification OTP',
+      text: `Your new OTP is ${userOtp}`,
+      html: `<p>Your new verification OTP is <b>${userOtp}</b>. It will expire in 5 minutes.</p>`
+    };
+
+    // ----- send mail -----
+    await transpoter.sendMail(mailOption);
+
+    // ----- response --------
+    return res.status(200).json({ success: true, message: 'A new OTP has been sent to your email.' });
     
   } catch (error) {
     console.log('Error:', error);
