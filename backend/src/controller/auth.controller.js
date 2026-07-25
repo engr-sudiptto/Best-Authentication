@@ -55,8 +55,8 @@ const registerController = async (req, res) => {
       from: config.SENDER_MAIL,
       to: email,
       subject: 'Verify your account - OTP',
-      text: `Your OTP for register is ${otp}. It will be expire in 5 minutes.`,
-      html: `<h3>Welcome to our platform!</h3><p>Your OTP for registration is: <h1><b>${otp}</b></h1></p><p>This OTP will expire in <b>5</b> minutes.</p></br></br></br><p>Best regards</p><p>Web authority team</p>`,
+      text: `Your OTP for register is ${userOtp}. It will be expire in 5 minutes.`,
+      html: `<h3>Welcome to our platform!</h3><p>Your OTP for registration is: <h1><b>${userOtp}</b></h1></p><p>This OTP will expire in <b>5</b> minutes.</p></br></br></br><p>Best regards</p><p>Web authority team</p>`,
     };
 
     // ----- send OTP via Email using Brevo ----------
@@ -108,7 +108,7 @@ const verifyOtpController = async (req, res) => {
     await existingUser.save()
 
     // ------ token(7d) create ------
-    const token = jwt.sign({ userId: existingUser._id }, config.JWT_SECRET, { expiresIn: '7d' });
+    const token = await jwt.sign({ userId: existingUser._id }, config.JWT_SECRET, { expiresIn: '7d' });
     res.cookie('token', token, {
       httpOnly: true,
       secure: config.NODE_ENV === 'production',
@@ -188,6 +188,43 @@ const resendOtpController = async (req, res) => {
 // ------ login controller --------
 const loginController = async (req, res) => {
   try {
+    const { usernameOrEmail, password } = req.body;
+
+    // -------- required fields ----------
+    if (!usernameOrEmail || usernameOrEmail.trim() === '') {
+      return res.status(400).json({success:false, message:'Username or Email is required'})
+    }
+    if (!password || password.trim() === '') {
+      return res.status(400).json({success:false, message:'Password is required'})
+    }
+
+    // ------ checking existing user --------
+    const existingUser = await userModel.findOne({ $or: [{ userName: usernameOrEmail }, { email: usernameOrEmail }] });
+    if (!existingUser) {
+      return res.status(400).json({ success: false, message:'User not found'})
+    }
+
+    // --------- password compear ---------
+    const isPassMatch = await bcrypt.compare(password, existingUser.password);
+    if (!isPassMatch) {
+      return res.status(400).json({success:false, message:'Invalid Username/Email or Password'})
+    }
+
+    // ------- update login status in the database --------
+    existingUser.isLoggedIn = true;
+    await existingUser.save();
+
+    // ------- token(7d) create -----
+    const token = await jwt.sign({ userId: existingUser._id }, config.JWT_SECRET, { expiresIn: '7d' });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: config.NODE_ENV === 'production',
+      sameSite: config.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    // ------ response -------
+    return res.status(200).json({success:true, message:'Login successful!'})
     
   } catch (error) {
     console.log('Error:', error);
@@ -203,7 +240,7 @@ const loginController = async (req, res) => {
 // ------ logout controller --------
 const logoutController = async (req, res) => {
   try {
-    
+
   } catch (error) {
     console.log('Error:', error);
     return res.status(500).json({success:false, message:error.message})
