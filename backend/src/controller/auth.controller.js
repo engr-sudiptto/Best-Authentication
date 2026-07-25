@@ -240,6 +240,34 @@ const loginController = async (req, res) => {
 // ------ logout controller --------
 const logoutController = async (req, res) => {
   try {
+        const token = req.cookies?.token;
+
+        // ----- find and update login status in the database -----
+        if (token) {
+          try {
+            const decoded = jwt.verify(token, config.JWT_SECRET);
+            await userModel.findByIdAndUpdate(decoded.userId, {
+              isLoggedIn: false,
+            });
+          } catch (jwtError) {
+            console.log(
+              'JWT Verification failed during logout:',
+              jwtError.message,
+            );
+          }
+        }
+
+        // ----- clear cookie -------
+        res.clearCookie('token', {
+          httpOnly: true,
+          secure: config.NODE_ENV === 'production',
+          sameSite: config.NODE_ENV === 'production' ? 'none' : 'strict',
+        });
+
+        // ------- response --------
+        return res
+          .status(200)
+          .json({ success: false, message: 'Logout successful!' });
 
   } catch (error) {
     console.log('Error:', error);
