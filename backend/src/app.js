@@ -1,14 +1,15 @@
+import cookieParser from 'cookie-parser';
 import express from 'express';
-import authRoute from './routes/auth.route.js';
+import authRoute from './router/auth.route.js';
 
-const app = express()
+const app = express();
+
+// ------- middlewares ---------
+app.use(express.json());
+app.use(cookieParser());
 
 
-// ---- middleware ----
-app.use(express.json())
-
-
-// ----- routes ------
+// ------ routes -------
 app.use('/api/auth', authRoute);
 
 

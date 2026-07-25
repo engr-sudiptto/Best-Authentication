@@ -4,21 +4,25 @@ const userSchema = mongoose.Schema(
   {
     userName: {
       type: String,
-      required: [true, 'User name is required'],
+      unique: true,
       trim: true,
-      unique:true,
+      required: [true, 'Username is required'],
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      trim: true,
       unique: true,
-      lowercase: true,
+      trim: true,
+      required: [true, 'Email is required'],
+      toLowercase: true,
     },
-    password: { type: String, required: [true, 'Password is required'] },
-    verifyOtp: { type: String, default: '' },
-    verifyOtpExpireAt: { type: Number, default: 0 },
-    isLoggedIn:{type:Boolean, default:false}
+    password: {
+      type: String,
+      trim: true,
+      required: [true, 'Password is required'],
+    },
+    otp: { type: String, default: '' },
+    otpExpiredAt: { type: Number, default: 0 },
+    isLoggedIn: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
