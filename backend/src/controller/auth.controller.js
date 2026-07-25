@@ -2,12 +2,68 @@ import userModel from './../models/user.model.js';
 import config from './../config/config.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt'
+import transpoter from './../config/email.config.js';
 
 
 
 // ------ register controller --------
 const registerController = async (req, res) => {
   try {
+    const { userName, email, password } = req.body;
+
+    // ------ required fields -------
+    const requiredFields = { userName: 'Username', email: 'Email', password: 'Password' };
+    for (const [key, label] of Object.entries(requiredFields)) {
+      if (!req.body[key] || req.body[key]?.trim() === '') {
+        return res.status(400).json({success:false, message:`${label} is required`})
+      }
+    }
+
+    // ------ checking exixting user -------
+    const existingUserName = await userModel.findOne({ userName });
+    if (existingUserName) {
+      return res.status(400).json({success:false, message:'Username is already taken'})
+    }
+    const existingUserEmail = await userModel.findOne({ email });
+    if (existingUserEmail) {
+      return res.status(400).json({success:false, message:'Email is already registered'})
+    }
+
+    // ------- hashing password --------
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // -------- genarate 6 disit OTP --------
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpiredAt = Date.now() + 5 * 60 * 1000;
+
+    // ------ creating new user object ---------
+    const newUser = new userModel({
+      userName,
+      email,
+      password:hashedPassword,
+      otp,
+      otpExpiredAt,
+      isLoggedIn: false,
+    });
+
+    // -------- save user in the database ---------
+    await newUser.save()
+
+    // ---- email configuration -------
+    const mailOption = {
+      from: config.SENDER_MAIL,
+      to: email,
+      subject: 'Verify your account - OTP',
+      text: `Your OTP for register is ${otp}. It will be expire in 5 minutes.`,
+      html: `<h3>Welcome to our platform!</h3><p>Your OTP for registration is: <h1><b>${otp}</b></h1></p><p>This OTP will expire in <b>5</b> minutes.</p></br></br></br><p>Best regards</p><p>Web authority team</p>`,
+    };
+
+    // ----- send OTP via Email using Brevo ----------
+    await transpoter.sendMail(mailOption)
+
+    // ----- response ------
+    return res.status(201).json({success:true, message:'Registration initiated. Please check your email for OTP.'})
     
   } catch (error) {
     console.log('Error:', error);

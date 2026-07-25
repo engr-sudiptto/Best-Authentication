@@ -5,10 +5,11 @@ import config from './config.js';
 const transpoter = nodeMailer.createTransport({
   host: 'smtp-relay.brevo.com',
   port: 587,
+  secure:false,
   auth: {
     user: config.BREVO_USER,
-    pass:config.BREVO_SMTP_KEY,
-  }
+    pass: config.BREVO_SMTP_KEY,
+  },
 });
 
 export default transpoter;
