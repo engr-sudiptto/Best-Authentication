@@ -282,6 +282,32 @@ const logoutController = async (req, res) => {
 // ------ check availabliy controller --------
 const checkAvailablityController = async (req, res) => {
   try {
+    const { userName, email } = req.body;
+
+    // ------- create response object --------
+    const availablity = {
+      userName:{available:true, message:`${userName} is available`},
+      email:{available:true, message:`${email} is available`}
+    }
+
+    // ------- checking username in database --------
+    if (userName && userName.trim() !== '') {
+      const existingUser = await userModel.findOne({ userName });
+      if (existingUser) {
+        availablity.userName = {available:false, message:`${userName} is already taken`}
+      }
+    }
+
+    // ------- checking email in database ----------
+    if (email && email.trim() !== '') {
+      const existingUser = await userModel.findOne({ email });
+      if (existingUser) {
+        availablity.email = {available:false, message:`${email} is already taken`}
+      }
+    }
+
+    // ------- response --------
+    return res.status(200).json({success:true, availablity})
     
   } catch (error) {
     console.log('Error:', error);
