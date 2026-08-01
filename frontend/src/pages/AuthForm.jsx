@@ -1,9 +1,60 @@
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
+import { AuthContext } from '../../context/AuthContext';
 
 const AuthForm = () => {
   const [isLoginBtnClick, setIsLoginBtnClick] = useState(false);
   const [submitClick, setSubmitClick] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+
+
+  const { availablityCheck } = useContext(AuthContext);
+
+  const [availability, setAvailability] = useState({
+    userName: { available: true, message: '' },
+    email: { available: true, message: '' },
+  });
+
+  
   const [otp, setOtp] = useState(new Array(6).fill(''));
+  const [data, setData] = useState({
+    userName: '',
+    email: '',
+    password: '',
+    usernameOrEmail:''
+  });
+
+  // -------- input on change handelr ---------
+  const inputOnChangeHandler = async (e) => {
+    const name = e.target.name;
+    const value = e.target.value;
+
+    const updateData = { ...data, [name]: value };
+    setData(updateData);
+
+    // ------- send backend request only for username & email ----------
+    if (name === 'userName') {
+      if (value.trim() !== '') {
+        const res = await availablityCheck(value, '');
+        if (res.success && res.availablity?.userName) {
+          setAvailability(prev => ({ ...prev, userName: res.availablity.userName }));
+        }
+      } else {
+        setAvailability(prev => ({ ...prev, userName: { available: true, message: '' } }));
+      }
+    }
+
+    if (name === 'email') {
+      if (value.trim() !== '') {
+        const res = await availablityCheck('', value);
+        if (res.success && res.availablity?.email) {
+          setAvailability(prev => ({ ...prev, email: res.availablity.email }));
+        }
+      } else {
+        setAvailability(prev => ({ ...prev, email: { available: true, message: '' } }));
+      }
+    }
+
+  }
 
   // -------- only number input & next input focus functionality ---------
   const handleChange = (e, index) => {
@@ -63,7 +114,11 @@ const AuthForm = () => {
   // --------- form submit handler -----------
   const handleSubmit = (e) => {
     e.preventDefault()
-    setSubmitClick(true)
+    if (isLoginBtnClick) {
+      setSubmitClick(false);
+    } else {
+      setSubmitClick(true);
+    }
   }
 
   return (
@@ -73,7 +128,9 @@ const AuthForm = () => {
         className="w-[90%] max-w-120 px-8 py-10 rounded-xl shadow-lg border border-gray-100 m-auto bg-white"
       >
         {submitClick ? (
-          // --------- otp form section ------
+          // =========================================================
+          // --------------- OTP FORM VERIFICATION VIEW --------------
+          // =========================================================
           <>
             <div>
               {/* ----------- otp section head line --------------  */}
@@ -105,14 +162,52 @@ const AuthForm = () => {
                 ))}
               </div>
 
+              {/* ------------ timer fot otp -------------  */}
+              <div>
+                <p className="text-center text-xs text-gray-600 mt-10 tracking-wide">
+                  OTP will expire in
+                  <span className="font-semibold">05:00</span>
+                </p>
+                <p className="text-center text-gray-600 text-xs mt-2 tracking-wide">
+                  Didn't receive the OTP?
+                  <button className="font-semibold underline hover:text-blue-700/70 cursor-pointer">
+                    Resend OTP
+                  </button>
+                </p>
+              </div>
+
               {/* ------------ otp submit button --------------  */}
-              <button className="w-50 h-10 block mx-auto cursor-pointer bg-blue-600/50 rounded-lg mt-10 text-white hover:bg-blue-600/60">
+              <button className="w-50 h-10 block mx-auto cursor-pointer bg-blue-600/50 rounded-lg mt-5 text-white hover:bg-blue-600/60">
                 Verify OTP
+              </button>
+
+              {/* ---------- back button -------------  */}
+              <button
+                onClick={() => setSubmitClick(false)}
+                className="text-xs text-gray-600 flex m-auto mt-10 items-center justify-center cursor-pointer hover:-translate-x-2 transition-all duration-200"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor"
+                  className="size-4 mt-0.5 mr-0.5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18"
+                  />
+                </svg>
+                Back to register
               </button>
             </div>
           </>
         ) : (
-          // ------------- register & login form section --------------
+          // =========================================================
+          // ----------- REGISTER & LOGIN FORM VIEW ------------------
+          // =========================================================
           <>
             {/* -------- auth head line ----------  */}
             <div className="mb-6 text-center">
@@ -133,8 +228,12 @@ const AuthForm = () => {
                 </label>
                 <input
                   type="text"
+                  name="usernameOrEmail"
+                  onChange={inputOnChangeHandler}
+                  value={data.usernameOrEmail}
+                  required
                   placeholder="@username or email"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
                 />
               </div>
             ) : (
@@ -144,25 +243,64 @@ const AuthForm = () => {
                 </label>
                 <input
                   type="text"
+                  name="userName"
+                  onChange={inputOnChangeHandler}
+                  value={data.userName}
+                  required
                   placeholder="@username"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
                 />
+                {availability.userName.message && (
+                  <p
+                    className={`text-xs mt-1 ${availability.userName.available ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {availability.userName.message}
+                  </p>
+                )}
+
                 <label className="block text-sm my-2 text-gray-800">
                   Email
                 </label>
                 <input
                   type="text"
+                  name="email"
+                  onChange={inputOnChangeHandler}
+                  value={data.email}
+                  required
                   placeholder="Email"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
                 />
+                {availability.email.message && (
+                  <p
+                    className={`text-xs mt-1 ${availability.email.available ? 'text-green-500' : 'text-red-500'}`}
+                  >
+                    {availability.email.message}
+                  </p>
+                )}
               </div>
             )}
             <label className="block text-sm my-2 text-gray-800">Password</label>
-            <input
-              type="text"
-              placeholder="Password"
-              className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
+            <div className="relative">
+              <input
+                name="password"
+                onChange={inputOnChangeHandler}
+                value={data.password}
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="Password"
+                className={`w-full h-11 border px-2 border-gray-300 rounded-lg ${showPassword ? 'text-sm' : 'text-xs'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500`}
+              />
+              <div
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute top-2.5 right-2.5 text-gray-600 cursor-pointer"
+              >
+                {showPassword ? (
+                  <i className="fa-regular fa-eye-slash text-sm"></i>
+                ) : (
+                  <i className="fa-regular fa-eye text-sm"></i>
+                )}
+              </div>
+            </div>
             {/* --------- submit button -------  */}
             <button
               className="w-full h-11 bg-blue-700/50 rounded-sm mt-7 text-white cursor-pointer hover:bg-blue-700/60"
