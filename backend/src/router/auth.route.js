@@ -11,7 +11,7 @@ authRoute.post('/verify-otp', verifyOtpController)
 authRoute.post('/resend-otp', resendOtpController)
 authRoute.post('/login', loginController)
 authRoute.post('/logout',authMiddleware, logoutController)
-authRoute.post('/check-availablity', checkAvailablityController)
+authRoute.get('/check-availablity', checkAvailablityController)
 
 
 export default authRoute
