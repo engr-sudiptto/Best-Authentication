@@ -285,24 +285,28 @@ const checkAvailablityController = async (req, res) => {
     const { userName, email } = req.body;
 
     // ------- create response object --------
-    const availablity = {
-      userName:{available:true, message:`${userName} is available`},
-      email:{available:true, message:`${email} is available`}
-    }
+    const availablity = {}
 
     // ------- checking username in database --------
     if (userName && userName.trim() !== '') {
+      const formattedUserName = userName.trim();
       const existingUser = await userModel.findOne({ userName });
       if (existingUser) {
-        availablity.userName = {available:false, message:`${userName} is already taken`}
+        availablity.userName = { available: false, message: `${formattedUserName} is already taken` };
+      } else {
+        availablity.userName = { available: true, message: `${formattedUserName} is available` };
       }
     }
 
     // ------- checking email in database ----------
     if (email && email.trim() !== '') {
-      const existingUser = await userModel.findOne({ email });
+      const formattedEmail = email.trim().toLowerCase();
+      const existingUser = await userModel.findOne({ email: formattedEmail });
+
       if (existingUser) {
-        availablity.email = {available:false, message:`${email} is already taken`}
+        availablity.email = { available: false, message: `${formattedEmail} is already taken` };
+      } else {
+        availablity.email = { available: true, message: `${formattedEmail} is available` };
       }
     }
 
@@ -314,6 +318,7 @@ const checkAvailablityController = async (req, res) => {
     return res.status(500).json({success:false, message:error.message})
   }
 }
+
 
 
 
