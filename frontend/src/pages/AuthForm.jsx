@@ -19,6 +19,7 @@ const AuthForm = () => {
     registerUser,
     verifyOtpController,
     resendOtpController,
+    loginController
   } = useContext(AuthContext);
 
   const [availability, setAvailability] = useState({
@@ -160,7 +161,13 @@ const AuthForm = () => {
     // =========================================
 
     if (isLoginBtnClick) {
-      // Implement login functionality here
+      const res = await loginController(data.usernameOrEmail, data.password);
+      if (res.success) {
+        toast.success(res.message || 'Login successful!');
+        navigate('/');
+      } else {
+        toast.error(res.message || 'Login failed. Please try again.');
+      }
       return;
     }
 

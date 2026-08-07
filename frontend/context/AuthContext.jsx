@@ -52,11 +52,23 @@ const AuthContextProvider = (props) => {
     }
   }
 
+  // ---------- login controller ----------
+  const loginController = async (usernameOrEmail, password) => {
+    try {
+      const response = await axios.post(`${url}/api/auth/login`, { usernameOrEmail, password });
+      return response.data;
+    } catch (error) {
+      console.log('Error to login user')
+      return error.response?.data || { success: false, message: "Error logging in user" };
+    }
+  };
+
   const contextValue = {
     availablityCheck,
     registerUser,
     verifyOtpController,
-    resendOtpController
+    resendOtpController,
+    loginController
   };
 
   return (
