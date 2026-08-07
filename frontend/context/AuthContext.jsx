@@ -1,6 +1,7 @@
 import axios from "axios";
 import { createContext } from "react";
 
+
 export const AuthContext = createContext(null);
 
 
@@ -18,8 +19,44 @@ const AuthContextProvider = (props) => {
     }
   };
 
+  // --------- register user ----------
+  const registerUser = async (userName, email, password) => {
+    try {
+      const response = await axios.post(`${url}/api/auth/register`, {userName, email, password});
+      return response.data;
+    } catch (error) {
+      console.log('Error to register user')
+      return error.response?.data || { success: false, message: "Error registering user" };
+    }
+  }
+
+  // ----------- verifyOtpController -----------
+  const verifyOtpController = async (email, otp) => {
+    try {
+      const response = await axios.post(`${url}/api/auth/verify-otp`, { email, otp });
+      return response.data;
+    } catch (error) {
+      console.log('Error to verify OTP')
+      return error.response?.data || { success: false, message: "Error verifying OTP" };
+    }
+  }
+
+  // ----------- resendOtpController -----------
+  const resendOtpController = async (email) => {
+    try {
+      const response = await axios.post(`${url}/api/auth/resend-otp`, { email });
+      return response.data;
+    } catch (error) {
+      console.log('Error to resend OTP')
+      return error.response?.data || { success: false, message: "Error resending OTP" };
+    }
+  }
+
   const contextValue = {
-    availablityCheck
+    availablityCheck,
+    registerUser,
+    verifyOtpController,
+    resendOtpController
   };
 
   return (

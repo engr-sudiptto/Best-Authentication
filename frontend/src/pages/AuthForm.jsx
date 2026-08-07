@@ -1,30 +1,41 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import { AuthContext } from '../../context/AuthContext';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const AuthForm = () => {
+  const navigate = useNavigate();
   const [isLoginBtnClick, setIsLoginBtnClick] = useState(false);
-  const [submitClick, setSubmitClick] = useState(false)
+  const [submitClick, setSubmitClick] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // ------- timer variables ---------
+  const [timer, setTimer] = useState(300); // 5 minutes in seconds
+  const [canResend, setCanResend] = useState(false);
 
-  const { availablityCheck } = useContext(AuthContext);
+
+  const {
+    availablityCheck,
+    registerUser,
+    verifyOtpController,
+    resendOtpController,
+  } = useContext(AuthContext);
 
   const [availability, setAvailability] = useState({
     userName: { available: true, message: '' },
     email: { available: true, message: '' },
   });
 
-  
   const [otp, setOtp] = useState(new Array(6).fill(''));
   const [data, setData] = useState({
     userName: '',
     email: '',
     password: '',
-    usernameOrEmail:''
+    usernameOrEmail: '',
   });
 
   // -------- input on change handelr ---------
-  const inputOnChangeHandler = async (e) => {
+  const inputOnChangeHandler = async e => {
     const name = e.target.name;
     const value = e.target.value;
 
@@ -36,10 +47,16 @@ const AuthForm = () => {
       if (value.trim() !== '') {
         const res = await availablityCheck(value, '');
         if (res.success && res.availablity?.userName) {
-          setAvailability(prev => ({ ...prev, userName: res.availablity.userName }));
+          setAvailability(prev => ({
+            ...prev,
+            userName: res.availablity.userName,
+          }));
         }
       } else {
-        setAvailability(prev => ({ ...prev, userName: { available: true, message: '' } }));
+        setAvailability(prev => ({
+          ...prev,
+          userName: { available: true, message: '' },
+        }));
       }
     }
 
@@ -50,11 +67,13 @@ const AuthForm = () => {
           setAvailability(prev => ({ ...prev, email: res.availablity.email }));
         }
       } else {
-        setAvailability(prev => ({ ...prev, email: { available: true, message: '' } }));
+        setAvailability(prev => ({
+          ...prev,
+          email: { available: true, message: '' },
+        }));
       }
     }
-
-  }
+  };
 
   // -------- only number input & next input focus functionality ---------
   const handleChange = (e, index) => {
@@ -63,45 +82,42 @@ const AuthForm = () => {
     // ----- only number ------
     if (value === ' ' || isNaN(value)) return;
 
-    const lastChar = value.slice(-1)
+    const lastChar = value.slice(-1);
 
     const newOtp = [...otp];
-    newOtp[index] = lastChar
+    newOtp[index] = lastChar;
     setOtp(newOtp);
 
-    // -------- next input focus functionality --------- 
+    // -------- next input focus functionality ---------
     if (lastChar && e.target.nextSibling) {
-      e.target.nextSibling.focus()
+      e.target.nextSibling.focus();
     }
-  }
-
+  };
 
   // ----------- prev input box focus functionality -------------
   const handleKeyDown = (e, index) => {
     if (e.key === 'Backspace') {
-      if (!otp[index] && index > 0 ) {
+      if (!otp[index] && index > 0) {
         e.target.previousSibling.focus();
       }
     }
-  }
-
+  };
 
   // ---------- copy paste controller -------------
   const handlePaste = e => {
-    e.preventDefault()
+    e.preventDefault();
     const pasteData = e.clipboardData.getData('text').slice(0, 6);
 
     // ------ only number can paste -------
     if (!isNaN(pasteData)) {
-      const newOtp = pasteData.split('')
+      const newOtp = pasteData.split('');
 
       // ----- if number is less than 6, another box will be empty --------
       const paddedOtp = [
         ...newOtp,
         ...new Array(6 - newOtp.length).fill(''),
       ].slice(0, 6);
-      
-      
+
       setOtp(paddedOtp);
 
       // ------  move focus to the last box --------
@@ -109,15 +125,105 @@ const AuthForm = () => {
       const inputs = e.target.parentElement.querySelectorAll('input');
       inputs[lastBoxIndex].focus();
     }
-  }
+  };
 
   // --------- form submit handler -----------
-  const handleSubmit = (e) => {
-    e.preventDefault()
+  const handleSubmit = async e => {
+    e.preventDefault();
+
+    // ===========================================================
+    // ============ verifyOtpController function call ============
+    // ===========================================================
+
+    if (submitClick) {
+      const otpString = otp.join('');
+      const otpRes = await verifyOtpController(data.email, otpString);
+
+      if (otpString.length !== 6) {
+        toast.error(otpRes.message || 'Please enter a valid 6-digit OTP.');
+        return;
+      }
+
+      if (otpRes.success) {
+        toast.success(
+          otpRes.message || 'Verification successful! You can now log in.',
+        );
+        navigate('/');
+      } else {
+        toast.error(otpRes.message || 'Verification failed. Please try again.');
+      }
+      return;
+    }
+
+    // =========================================
+    // ======= login user function call ========
+    // =========================================
+
     if (isLoginBtnClick) {
-      setSubmitClick(false);
-    } else {
+      // Implement login functionality here
+      return;
+    }
+
+    // =================================================
+    // ========= register user function call ===========
+    // =================================================
+
+    if (!availability.userName.available || !availability.email.available) {
+      toast.error('Username or email is already taken!');
+      return;
+    }
+
+    const res = await registerUser(data.userName, data.email, data.password);
+    if (res.success) {
+      toast.success(
+        res.message || 'Registration successful! Verification code sent.',
+      );
       setSubmitClick(true);
+    } else {
+      toast.error(res.message || 'Registration failed. Please try again.');
+    }
+  };
+
+
+  // ==================================================
+  // ======= resend otp timer controller  =============
+  // ==================================================
+
+  useEffect(() => {
+    let interval = null;
+
+    if (submitClick && timer > 0) {
+      interval = setInterval(() => {
+        setTimer(prev => prev - 1);
+      }, 1000)
+    } else if (timer === 0) {
+      setCanResend(true);
+      clearInterval(interval);
+    }
+
+    return () => clearInterval(interval)
+  },[submitClick, timer])
+
+
+  const formatTime = seconds => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes < 10 ? '0' : ''}${minutes}:${remainingSeconds < 10 ? '0':''}${remainingSeconds}`;
+  }
+
+
+  // ============ resendOtpController function call ============
+  const handleResendOtp = async () => {
+    if (!canResend) return
+    
+
+    const res = await resendOtpController(data.email);
+    if (res.success) {
+      toast.success(res.message || 'OTP resent successfully!');
+      setTimer(300); // Reset timer to 5 minutes
+      setCanResend(false); // Disable resend until timer reaches 0 again
+    } else {
+      toast.error(res.message || 'Failed to resend OTP. Please try again.');
     }
   }
 
@@ -166,13 +272,20 @@ const AuthForm = () => {
               <div>
                 <p className="text-center text-xs text-gray-600 mt-10 tracking-wide">
                   OTP will expire in
-                  <span className="font-semibold">05:00</span>
+                  <span className="font-semibold ml-1">{formatTime(timer)}</span>
                 </p>
                 <p className="text-center text-gray-600 text-xs mt-2 tracking-wide">
                   Didn't receive the OTP?
-                  <button className="font-semibold underline hover:text-blue-700/70 cursor-pointer">
+                  <span
+                    onClick={handleResendOtp}
+                    className={`font-semibold underline ml-0.5 ${
+                      canResend
+                        ? 'text-blue-600 cursor-pointer hover:text-blue-800'
+                        : 'text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
                     Resend OTP
-                  </button>
+                  </span>
                 </p>
               </div>
 
@@ -262,7 +375,7 @@ const AuthForm = () => {
                   Email
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   name="email"
                   onChange={inputOnChangeHandler}
                   value={data.email}
