@@ -1,13 +1,17 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { AuthContext } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const AuthForm = () => {
   const navigate = useNavigate();
-  const [isLoginBtnClick, setIsLoginBtnClick] = useState(false);
+  const location = useLocation();
+
+  // const [isLoginBtnClick, setIsLoginBtnClick] = useState(false);
   const [submitClick, setSubmitClick] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const isLoginBtnClick = location.pathname === '/login';
 
   // ------- timer variables ---------
   const [timer, setTimer] = useState(300); // 5 minutes in seconds
@@ -38,14 +42,20 @@ const AuthForm = () => {
   // -------- input on change handelr ---------
   const inputOnChangeHandler = async e => {
     const name = e.target.name;
-    const value = e.target.value;
+    let value = e.target.value;
+
+    if (name === 'userName') {
+      if (value.trim() !== '' && !value.startsWith('@')) {
+        value = `@${value}`;
+      }
+    }
 
     const updateData = { ...data, [name]: value };
     setData(updateData);
 
     // ------- send backend request only for username & email ----------
     if (name === 'userName') {
-      if (value.trim() !== '') {
+      if (value.trim() !== '' && value !== '@') {
         const res = await availablityCheck(value, '');
         if (res.success && res.availablity?.userName) {
           setAvailability(prev => ({
@@ -279,7 +289,9 @@ const AuthForm = () => {
               <div>
                 <p className="text-center text-xs text-gray-600 mt-10 tracking-wide">
                   OTP will expire in
-                  <span className="font-semibold ml-1">{formatTime(timer)}</span>
+                  <span className="font-semibold ml-1">
+                    {formatTime(timer)}
+                  </span>
                 </p>
                 <p className="text-center text-gray-600 text-xs mt-2 tracking-wide">
                   Didn't receive the OTP?
@@ -435,7 +447,9 @@ const AuthForm = () => {
                 : 'Already have an account? '}
               <button
                 type="button"
-                onClick={() => setIsLoginBtnClick(!isLoginBtnClick)}
+                onClick={() =>
+                  navigate(isLoginBtnClick ? '/register' : '/login')
+                }
                 className="text-blue-600/50 cursor-pointer hover:text-blue-600/70 font-semibold hover:underline focus:outline-none"
               >
                 {isLoginBtnClick ? 'Register' : 'Login'}
