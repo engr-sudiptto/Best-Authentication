@@ -7,13 +7,14 @@ const userSchema = mongoose.Schema(
       unique: true,
       trim: true,
       required: [true, 'Username is required'],
+      lowercase: true,
     },
     email: {
       type: String,
       unique: true,
       trim: true,
       required: [true, 'Email is required'],
-      toLowercase: true,
+      lowercase: true,
     },
     password: {
       type: String,
@@ -23,6 +24,7 @@ const userSchema = mongoose.Schema(
     otp: { type: String, default: '' },
     otpExpiredAt: { type: Number, default: 0 },
     isLoggedIn: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true },
 );

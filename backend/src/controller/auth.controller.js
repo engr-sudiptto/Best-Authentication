@@ -105,6 +105,7 @@ const verifyOtpController = async (req, res) => {
     existingUser.otp = '';
     existingUser.otpExpiredAt = 0;
     existingUser.isLoggedIn = true;
+    existingUser.isVerified = true;
     await existingUser.save()
 
     // ------ token(7d) create ------
@@ -208,6 +209,38 @@ const loginController = async (req, res) => {
     const isPassMatch = await bcrypt.compare(password, existingUser.password);
     if (!isPassMatch) {
       return res.status(400).json({success:false, message:'Invalid Username/Email or Password'})
+    }
+
+    // --------- check user is verified or not ---------
+    if (!existingUser.isVerified) {
+      const userOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const userOtpExpiredAt = Date.now() + 5 * 60 * 1000;
+
+      existingUser.otp = userOtp;
+      existingUser.otpExpiredAt = userOtpExpiredAt;
+      await existingUser.save();
+
+      // ----- mail configuration -----
+      const mailOption = {
+        from: config.SENDER_MAIL,
+        to: existingUser.email,
+        subject: 'Verify your account - OTP',
+        text: `Your OTP for verification is ${userOtp}. It will expire in 5 minutes.`,
+        html: `<h3>Welcome back!</h3><p>Your OTP for verification is: <h1><b>${userOtp}</b></h1></p><p>This OTP will expire in <b>5</b> minutes.</p></br></br></br><p>Best regards</p><p>Web authority team</p>`,
+      };
+
+      // ----- send mail -----
+      await transpoter.sendMail(mailOption);
+
+      return res
+        .status(200)
+        .json({
+          success: false,
+          isVerified: false,
+          email: existingUser.email,
+          message:
+            'Account is not verified. A new OTP has been sent to your email.',
+        });
     }
 
     // ------- update login status in the database --------
