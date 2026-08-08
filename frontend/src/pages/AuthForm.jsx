@@ -175,6 +175,13 @@ const AuthForm = () => {
       if (res.success) {
         toast.success(res.message || 'Login successful!');
         navigate('/');
+      } else if (res.isVerified === false) {
+        toast.warning(res.message || 'Your account is not verified. Please verify your account.');
+
+        setData(prev => ({ ...prev, email: res.email }));
+        setSubmitClick(true);
+        setTimer(300);
+        setCanResend(false);
       } else {
         toast.error(res.message || 'Login failed. Please try again.');
       }
@@ -242,6 +249,12 @@ const AuthForm = () => {
     } else {
       toast.error(res.message || 'Failed to resend OTP. Please try again.');
     }
+  }
+
+  // ======= verify form back to register button click ===========
+  const backToRegister = () => {
+    setSubmitClick(false);
+    toast.warning('Your account created successful but not verified. To verify Login Now')
   }
 
   return (
@@ -314,8 +327,8 @@ const AuthForm = () => {
               </button>
 
               {/* ---------- back button -------------  */}
-              <button
-                onClick={() => setSubmitClick(false)}
+              <span
+                onClick={backToRegister}
                 className="text-xs text-gray-600 flex m-auto mt-10 items-center justify-center cursor-pointer hover:-translate-x-2 transition-all duration-200"
               >
                 <svg
@@ -333,7 +346,7 @@ const AuthForm = () => {
                   />
                 </svg>
                 Back to register
-              </button>
+              </span>
             </div>
           </>
         ) : (
@@ -365,7 +378,7 @@ const AuthForm = () => {
                   value={data.usernameOrEmail}
                   required
                   placeholder="@username or email"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all lowercase"
                 />
               </div>
             ) : (
@@ -380,11 +393,11 @@ const AuthForm = () => {
                   value={data.userName}
                   required
                   placeholder="@username"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500 lowercase"
                 />
                 {availability.userName.message && (
                   <p
-                    className={`text-xs mt-1 ${availability.userName.available ? 'text-green-500' : 'text-red-500'}`}
+                    className={`text-xs mt-1 lowercase ${availability.userName.available ? 'text-green-500' : 'text-red-500'}`}
                   >
                     {availability.userName.message}
                   </p>
@@ -400,11 +413,11 @@ const AuthForm = () => {
                   value={data.email}
                   required
                   placeholder="Email"
-                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500"
+                  className="w-full h-11 border px-2 border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-gray-500 lowercase"
                 />
                 {availability.email.message && (
                   <p
-                    className={`text-xs mt-1 ${availability.email.available ? 'text-green-500' : 'text-red-500'}`}
+                    className={`text-xs mt-1 lowercase ${availability.email.available ? 'text-green-500' : 'text-red-500'}`}
                   >
                     {availability.email.message}
                   </p>
